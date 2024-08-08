@@ -2,9 +2,6 @@
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="200" alt="Nest Logo" /></a>
 </p>
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
-
 <p align="center">
   A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.
 </p>
@@ -20,12 +17,10 @@
   <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
   <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow"></a>
 </p>
-<!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-[![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
 ## Описание
 
-Фуллстек приложение - облачное хранилище - созданное с использованием фреймворков [Nest.js](https://github.com/nestjs/nest) и [Next.js](https://github.com/vercel).
+Фуллстек приложение - cloud storage - созданное с использованием фреймворков [Nest.js](https://github.com/nestjs/nest) и [Next.js](https://github.com/vercel).
 
 ## Установка nest/cli
 
@@ -110,8 +105,88 @@ Nest.js приложение формируется из следующих ко
 5. **Упрощение коммуникации**: Обеспечивает ясное и единообразное представление API, что упрощает взаимодействие между разработчиками и другими заинтересованными сторонами.
 
 ```bash
-# установка swagger-а в проект
+# установка swagger в проект
 npm i @nestjs/swagger
 ```
 
 [Документация](https://docs.nestjs.com/openapi/introduction) по подключению swagger-а.
+
+## БД в Docker
+
+Существует множество способов создать докер-контейнер с необходимыми сервисами. Наиболее простые способы это через DockerCLI и с помощью `docker-compose.yml` файла.
+Для просмотра баз данных, развёрнутых в докер-контейнере, есть множество UI-инструментов, наиболее простой из них это Adminer.
+Для того чтобы использовать Adminer для просмотра содержимого базы данных PostgreSQL, развернутой в Docker, делаем следующее:
+
+### 1: Развертывание PostgreSQL БД в Docker
+
+Контейнер с PostgreSQL, можно развернуть с помощью следующей команды:
+
+```bash
+docker run --name my-postgres -e POSTGRES_PASSWORD=mysecretpassword -d postgres
+```
+
+### 2: Развертывание Adminer в Docker
+
+Adminer, который будет использоваться для подключения к контейнеру PostgreSQL, развёртывается следующей командой:
+
+```bash
+docker run --name my-adminer -d --link my-postgres:postgres -p 8080:8080 adminer
+```
+
+### 3: Подключение к Adminer
+
+1. В браузере и переходим по адресу `http://localhost:8080`.
+2. Появится страница входа Adminer. Заполняем поля следующим образом:
+   - **System**: PostgreSQL
+   - **Server**: postgres (или IP-адрес контейнера PostgreSQL, если не используется `--link`)
+   - **Username**: postgres
+   - **Password**: mysecretpassword
+   - **Database**: (оставить пустым, чтобы увидеть список всех баз данных, или указать конкретную базу данных)
+
+3. Нажимаем кнопку "Login" для входа.
+
+После входа видим список баз данных. Выбираем нужную базу данных и увидим список таблиц. Кликаем на любую таблицу, чтобы увидеть её содержимое.
+
+### Пример использования Docker Compose
+
+При использовании Docker Compose для развертывания PostgreSQL и Adminer, создаём файл `docker-compose.yml` со следующим содержимым:
+
+```yaml
+version: '3.8'
+
+services:
+  db:
+    image: postgres
+    restart: always
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: mysecretpassword
+      POSTGRES_DB: mydatabase
+    ports:
+      - "5432:5432"
+
+  adminer:
+    image: adminer
+    restart: always
+    ports:
+      - "8080:8080"
+```
+
+### Управление докер-контейнерами
+
+```bash
+# создание докер-контейнера с БД
+$ docker-compose up -d
+
+# удаление докер-контейнера
+$ docker-compose down
+
+# список томов, в которых хранятся данные
+$ docker volume ls
+
+# удаление тома с данными, если возникла проблема с кешированием
+$ docker volume rm <имя_вашего_докер_тома>
+```
+
+После запуска контейнера можно перейти по адресу `http://localhost:8080`, чтобы использовать Adminer для управления базой данных PostgreSQL.
