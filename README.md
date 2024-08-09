@@ -190,3 +190,70 @@ $ docker volume rm <имя_вашего_докер_тома>
 ```
 
 После запуска контейнера можно перейти по адресу `http://localhost:8080`, чтобы использовать Adminer для управления базой данных PostgreSQL.
+
+## Multer
+
+Multer — это middleware для Node.js, который используется для обработки мультипарт-запросов (multipart/form-data). Такие запросы обычно отправляются при загрузке файлов через формы HTML. В связке с Nest.js, Multer позволяет легко обрабатывать загруженные файлы и сохранять их на сервере.
+
+### Для чего нужен Multer?
+
+- **Обработка файловых загрузок**: Multer позволяет легко обрабатывать загрузку файлов, полученных в HTTP-запросах.
+- **Сохранение файлов**: Вы можете настроить, куда сохранять загруженные файлы и под каким именем.
+- **Валидация файлов**: Multer позволяет проверять загруженные файлы на соответствие определенным критериям (например, тип файла или размер).
+
+### Установка Multer
+
+Для использования Multer в проекте Nest.js, используем следующую команду:
+
+```bash
+npm i @types/multer
+```
+
+### Настройка Multer в Nest.js
+
+Multer подключается в контроллере обрабатывающем загрузку файлов с помощью специальных декораторов.
+В декораторы можно передать настройки для сохранения файлов в определенную директорию, а также задать другие параметры, такие как ограничения на размер файла.
+
+1. **Настройка Multer в контроллере**
+
+```typescript
+import { Controller, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+
+@Controller('upload')
+export class UploadController {
+  @Post()
+  @UseInterceptors(FileInterceptor('file', {
+    storage: diskStorage({
+      destination: './uploads',
+      filename: (req, file, callback) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        const ext = extname(file.originalname);
+        const filename = `${file.fieldname}-${uniqueSuffix}${ext}`;
+        callback(null, filename);
+      },
+    }),
+    limits: {
+      fileSize: 5 * 1024 * 1024, // 5 MB
+    },
+  }))
+  uploadFile(@UploadedFile() file: Express.Multer.File) {
+    console.log(file);
+    return {
+      originalname: file.originalname,
+      filename: file.filename,
+      path: file.path,
+    };
+  }
+}
+```
+
+### Пример использования
+
+Теперь вы можете отправлять POST-запросы на маршрут `/upload` с файлом в теле запроса. Например, используя `curl`:
+
+```bash
+curl -F 'file=@/path/to/your/file.jpg' http://localhost:3000/upload
+```
