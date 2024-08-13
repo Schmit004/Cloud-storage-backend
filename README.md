@@ -257,3 +257,130 @@ export class UploadController {
 ```bash
 curl -F 'file=@/path/to/your/file.jpg' http://localhost:3000/upload
 ```
+
+## Passport
+
+**Passport** — это библиотека для Node.js, которая предоставляет гибкий и модульный подход к аутентификации. Она предоставляет middleware для Express и других фреймворков для обработки аутентификации.
+Основное преимущество Passport заключается в его модульности и поддержке множества стратегий аутентификации, которые можно легко добавлять и настраивать.
+
+### Стратегии аутентификации
+
+Стратегии аутентификации в Passport — это плагины, которые реализуют конкретные методы аутентификации. Например:
+
+- **Локальная стратегия**: Аутентификация с использованием имени пользователя и пароля.
+- **JWT стратегия**: Аутентификация с использованием JSON Web Tokens.
+- **OAuth стратегии**: Аутентификация через сторонние сервисы, такие как Google, Facebook, GitHub и т.д.
+
+### Использование Passport в Nest.js
+
+Nest.js предоставляет официальный модуль `@nestjs/passport`, который упрощает интеграцию Passport в проект Nest.js.
+
+#### Установка
+
+Для начала устанавливаем необходимые пакеты:
+
+```bash
+npm install @nestjs/passport passport passport-local passport-jwt
+npm install @types/passport-local @types/passport-jwt --save-dev
+```
+
+#### Настройка локальной стратегии
+
+1. **Создание стратегии**
+
+- Создаём файл `local.strategy.ts`.
+- В файле создаём класс, который будет использовать локальную стратегию Passport.
+- Реализуем метод для валидации пользователя на основе имени пользователя и пароля.
+
+```typescript
+@Injectable()
+export class LocalStrategy extends PassportStrategy(Strategy) {
+  constructor(private authService: AuthService) {
+    super();
+  }
+
+  async validate(username: string, password: string): Promise<any> {
+    const user = await this.authService.validateUser(username, password);
+    if (!user) {
+      throw new UnauthorizedException();
+    }
+    return user;
+  }
+}
+```
+
+2. **Создание сервиса аутентификации**
+
+Создаём файл `auth.service.ts` и реализуем метод, который проверяет пользователя в базе данных и сравнивает пароль:
+
+```typescript
+@Injectable()
+export class AuthService {
+  constructor(private usersService: UsersService) {}
+
+  async validateUser(username: string, password: string): Promise<any> {
+    const user = await this.usersService.findOne(username);
+    if (user && user.password === password) {
+      const { password, ...result } = user;
+      return result;
+    }
+    return null;
+  }
+}
+```
+
+3. **Создание модуля аутентификации**
+
+Создайте файл `auth.module.ts` и регистрируем класс LocalStrategy в NestJS через механизм внедрения зависимостей. При регистрации класса как провайдера в модуле аутентификации NestJS самостоятельно загрузит и активирует его:
+
+```typescript
+@Module({
+  imports: [UsersModule, PassportModule],
+  providers: [AuthService, LocalStrategy],
+})
+export class AuthModule {}
+```
+
+4. **Использование Guard для защиты маршрутов**
+
+В файле `local.guard.ts` создаём LocalAuthGuard, который будет использовать локальную стратегию для защиты маршрутов.
+В большинстве случаев, простого наследования от AuthGuard и указания стратегии достаточно для выполнения основных задач аутентификации:
+
+```typescript
+@Injectable()
+export class LocalAuthGuard extends AuthGuard('local') {}
+```
+
+Если требуется дополнительная логика, Guard можно расширить, добавив необходимые методы и логику:
+
+```typescript
+@Injectable()
+export class LocalAuthGuard extends AuthGuard('local') {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const result = (await super.canActivate(context)) as boolean;
+    const request = context.switchToHttp().getRequest();
+    await super.logIn(request);
+    return result;
+  }
+}
+```
+
+5. **Использование Guard в контроллере**
+
+Используем созданный LocalAuthGuard в контроллере для аутентификации:
+
+```typescript
+@Controller('auth')
+export class AuthController {
+  constructor(private authService: AuthService) {}
+
+  @UseGuards(LocalAuthGuard)
+  @Post('login')
+  async login(@Request() req) {
+    return req.user;
+  }
+}
+```
+
+Связь между `LocalAuthGuard` и `LocalStrategy` происходит через имя стратегии **'local'**, которое используется в `AuthGuard`. Passport автоматически связывает Guard с соответствующей стратегией, зарегистрированной в приложении.
+Механизм связи реализован в модуле `auth.module.ts`.
