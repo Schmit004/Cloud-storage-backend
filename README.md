@@ -20,7 +20,7 @@
 
 ## Описание
 
-Фуллстек приложение - cloud storage - созданное с использованием фреймворков [Nest.js](https://github.com/nestjs/nest) и [Next.js](https://github.com/vercel).
+REST API для облачного хранилища, написанный с использованием [Nest.js](https://github.com/nestjs/nest) фреймворка.
 
 ## Установка nest/cli
 
