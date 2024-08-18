@@ -10,11 +10,11 @@ export class UsersService {
   constructor(@InjectRepository(UserEntity) private repository: Repository<UserEntity>) {}
 
   async findByEmail(email: string) {
-    return this.repository.findOneBy({ email });
+    return await this.repository.findOneBy({ email });
   }
 
   async findById(id: number) {
-    return this.repository.findOneBy({ id });
+    return await this.repository.findOneBy({ id });
   }
 
   create(dto: CreateUserDto) {
